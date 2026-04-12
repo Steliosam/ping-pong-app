@@ -441,25 +441,53 @@
 </div>
 
 <script>
+  var DB = 'https://pingpong-3b70f-default-rtdb.firebaseio.com/state.json';
   var state = { names: ['Γιώργος', 'Στέλιος'], scores: [0, 0] };
-
-  function load() {
-    try {
-      var s = localStorage.getItem('pp');
-      if (s) state = JSON.parse(s);
-    } catch(e) {}
-    render();
-  }
-
-  function save() {
-    try { localStorage.setItem('pp', JSON.stringify(state)); } catch(e) {}
-  }
+  var isSaving = false;
 
   function render() {
     document.getElementById('nameDisplay0').textContent = state.names[0];
     document.getElementById('nameDisplay1').textContent = state.names[1];
     document.getElementById('scoreDisplay0').textContent = state.scores[0];
     document.getElementById('scoreDisplay1').textContent = state.scores[1];
+    document.title = state.names[0] + ' ' + state.scores[0] + ' – ' + state.names[1] + ' ' + state.scores[1];
+  }
+
+  async function save() {
+    isSaving = true;
+    try {
+      await fetch(DB, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state)
+      });
+    } catch(e) {}
+    isSaving = false;
+  }
+
+  function listenRealtime() {
+    var es = new EventSource(DB.replace('.json', '') + '.json');
+    es.addEventListener('put', function(e) {
+      if (isSaving) return;
+      try {
+        var d = JSON.parse(e.data);
+        if (d && d.data) { state = d.data; render(); }
+      } catch(err) {}
+    });
+    es.onerror = function() {
+      es.close();
+      setTimeout(listenRealtime, 5000);
+    };
+  }
+
+  async function load() {
+    try {
+      var r = await fetch(DB);
+      var d = await r.json();
+      if (d) state = d;
+    } catch(e) {}
+    render();
+    listenRealtime();
   }
 
   function addWin(i) {
