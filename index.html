@@ -52,12 +52,12 @@
     }
 
     .header-motto {
-      display: none;
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 18px;
+      font-size: clamp(16px, 4vw, 22px);
       letter-spacing: 3px;
-      color: rgba(255,255,255,0.85);
+      color: rgba(255,255,255,0.88);
       text-shadow: 0 0 20px rgba(255,255,255,0.15);
+      line-height: 1;
     }
 
     .edit-btn {
@@ -183,9 +183,6 @@
     }
 
     @media (max-width: 600px) {
-      .header-motto { display: block; }
-      .center-stack { display: none; }
-      .player-zone { justify-content: center; padding: 1rem 0.5rem; }
       .player-score { font-size: clamp(80px, 20vw, 110px); }
       .tap-hint { display: none; }
     }
@@ -396,7 +393,6 @@
     </div>
 
     <div class="center-stack">
-      <div class="motto">ΠΟΙΟΣ ΚΕΡΔΙΣΕ? 🏓</div>
       <div class="divider">VS</div>
     </div>
 
