@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Ποιος Κέρδισε? 🏓</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --p1:      #00D49A;
+      --p1-dim:  #007A5C;
+      --p1-bg:   #071f18;
+      --p1-glow: rgba(0,212,154,0.18);
+      --p2:      #FF6B35;
+      --p2-dim:  #a83c10;
+      --p2-bg:   #1f0a04;
+      --p2-glow: rgba(255,107,53,0.18);
+      --bg:      #0a0a14;
+      --surface: #13131f;
+      --border:  rgba(255,255,255,0.08);
+      --muted:   rgba(255,255,255,0.35);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    /* ─── Layout ──────────────────────────────── */
+    .app {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ─── Header ──────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 14px 18px 10px;
+      position: relative;
+      z-index: 5;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .edit-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: rgba(255,255,255,0.7);
+      padding: 7px 14px;
+      font-size: 13px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .edit-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+
+    /* ─── Score Area ──────────────────────────── */
+    .scores {
+      flex: 1;
+      display: flex;
+      position: relative;
+      min-height: 0;
+    }
+
+    .player-zone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      padding: 2rem 1rem;
+      transition: background 0.12s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* subtle radial glow */
+    .player-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    #zone0::before { background: radial-gradient(ellipse at center, var(--p1-glow) 0%, transparent 70%); }
+    #zone1::before { background: radial-gradient(ellipse at center, var(--p2-glow) 0%, transparent 70%); }
+
+    .player-zone:active::before { opacity: 1; }
+
+    #zone0 { background: var(--p1-bg); border-right: 1px solid rgba(0,212,154,0.12); }
+    #zone1 { background: var(--p2-bg); }
+    #zone0:active { background: #0a2a20; }
+    #zone1:active { background: #2a1007; }
+
+    .player-zone.disabled {
+      cursor: default;
+      pointer-events: none;
+      filter: brightness(0.45);
+    }
+
+    .player-name {
+      font-weight: 900;
+      font-size: 17px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    #zone0 .player-name { color: var(--p1); }
+    #zone1 .player-name { color: var(--p2); }
+
+    .player-score {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(90px, 22vw, 140px);
+      line-height: 1;
+    }
+    #zone0 .player-score { color: var(--p1); text-shadow: 0 0 60px rgba(0,212,154,0.3); }
+    #zone1 .player-score { color: var(--p2); text-shadow: 0 0 60px rgba(255,107,53,0.3); }
+
+    .tap-hint {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    /* center stack with motto + ball */
+    .center-stack {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .motto {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(14px, 3vw, 20px);
+      letter-spacing: 4px;
+      color: rgba(255,255,255,0.88);
+      text-shadow:
+        0 0 28px rgba(255,255,255,0.2),
+        0 2px 14px rgba(0,0,0,0.9);
+      white-space: nowrap;
+      text-align: center;
+      background: rgba(0,0,0,0.45);
+      padding: 5px 16px 4px;
+      border-radius: 99px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .divider {
+      width: 52px;
+      height: 52px;
+      background: var(--bg);
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 0 0 6px var(--bg);
+    }
+
+    /* ─── Footer ──────────────────────────────── */
+    footer {
+      display: flex;
+      justify-content: flex-end;
+      padding: 10px 18px 14px;
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .reset-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      border: 1px solid rgba(255,80,80,0.25);
+      border-radius: 8px;
+      color: rgba(255,100,100,0.65);
+      padding: 7px 14px;
+      font-size: 13px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .reset-btn:hover { background: rgba(255,80,80,0.08); border-color: rgba(255,80,80,0.4); color: rgba(255,100,100,0.9); }
+
+    /* ─── Score bump animation ─────────────────── */
+    @keyframes bump {
+      0%   { transform: scale(1); }
+      35%  { transform: scale(1.15); }
+      65%  { transform: scale(0.97); }
+      100% { transform: scale(1); }
+    }
+    .bump { animation: bump 0.28s cubic-bezier(.36,.07,.19,.97); }
+
+    /* ─── Edit Modal ──────────────────────────── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      z-index: 50;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    @keyframes pop-in {
+      from { opacity: 0; transform: scale(0.92) translateY(12px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 18px;
+      padding: 2rem 1.75rem;
+      width: min(380px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      animation: pop-in 0.2s ease-out;
+    }
+
+    .modal-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 1.5px;
+      text-align: center;
+      color: rgba(255,255,255,0.85);
+    }
+
+    .edit-field {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .swatch {
+      width: 10px;
+      height: 40px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .edit-field input {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-size: 16px;
+      font-weight: 900;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      min-width: 0;
+    }
+    .edit-field input:focus { border-color: rgba(255,255,255,0.35); }
+
+    .edit-score {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--muted);
+      min-width: 36px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .modal-save {
+      background: #fff;
+      color: var(--bg);
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .modal-save:hover  { opacity: 0.88; }
+    .modal-save:active { transform: scale(0.98); }
+
+    /* ─── Confirm reset overlay ─────────────── */
+    .confirm-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      z-index: 60;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .confirm-backdrop.open { display: flex; }
+
+    .confirm-box {
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 1.75rem;
+      width: min(320px, 100%);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+      animation: pop-in 0.18s ease-out;
+    }
+    .confirm-box p { font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.8); }
+    .confirm-actions { display: flex; gap: 10px; }
+    .confirm-actions button {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      border: none;
+    }
+    .confirm-actions button:hover { opacity: 0.85; }
+    #confirmYes { background: rgba(255,80,80,0.85); color: #fff; }
+    #confirmNo  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <header>
+    <button class="edit-btn" onclick="openEdit()">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+        <path d="M9.5 2L12 4.5L4.5 12H2V9.5L9.5 2Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/>
+        <path d="M8 3.5L10.5 6" stroke="currentColor" stroke-width="1.3"/>
+      </svg>
+      edit
+    </button>
+  </header>
+
+  <div class="scores">
+    <div class="player-zone" id="zone0" onclick="addWin(0)">
+      <div class="player-name" id="nameDisplay0">Γιώργος</div>
+      <div class="player-score" id="scoreDisplay0">0</div>
+      <div class="tap-hint">πάτα για νίκη</div>
+    </div>
+
+    <div class="center-stack">
+      <div class="motto">ΠΟΙΟΣ ΚΕΡΔΙΣΕ? 🏓</div>
+      <div class="divider">VS</div>
+    </div>
+
+    <div class="player-zone" id="zone1" onclick="addWin(1)">
+      <div class="player-name" id="nameDisplay1">Στέλιος</div>
+      <div class="player-score" id="scoreDisplay1">0</div>
+      <div class="tap-hint">πάτα για νίκη</div>
+    </div>
+  </div>
+
+  <footer>
+    <button class="reset-btn" onclick="askReset()">
+      <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+        <path d="M2 7A5 5 0 1 0 4 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <path d="M4 1.5V4H1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      reset
+    </button>
+  </footer>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal">
+    <div class="modal-title">ΑΛΛΑΓΗ ΟΝΟΜΑΤΩΝ</div>
+    <div class="edit-field">
+      <div class="swatch" style="background:var(--p1);"></div>
+      <input type="text" id="nameInput0" maxlength="20">
+      <span class="edit-score" id="editScore0">(0)</span>
+    </div>
+    <div class="edit-field">
+      <div class="swatch" style="background:var(--p2);"></div>
+      <input type="text" id="nameInput1" maxlength="20">
+      <span class="edit-score" id="editScore1">(0)</span>
+    </div>
+    <button class="modal-save" onclick="saveEdit()">✓ &nbsp;ΟΚ</button>
+  </div>
+</div>
+
+<!-- Reset confirm -->
+<div class="confirm-backdrop" id="confirmModal">
+  <div class="confirm-box">
+    <p>Μηδενισμός σκορ;</p>
+    <div class="confirm-actions">
+      <button id="confirmNo"  onclick="closeConfirm()">Άκυρο</button>
+      <button id="confirmYes" onclick="doReset()">Ναι, reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var state = { names: ['Γιώργος', 'Στέλιος'], scores: [0, 0] };
+
+  function load() {
+    try {
+      var s = localStorage.getItem('pp');
+      if (s) state = JSON.parse(s);
+    } catch(e) {}
+    render();
+  }
+
+  function save() {
+    try { localStorage.setItem('pp', JSON.stringify(state)); } catch(e) {}
+  }
+
+  function render() {
+    document.getElementById('nameDisplay0').textContent = state.names[0];
+    document.getElementById('nameDisplay1').textContent = state.names[1];
+    document.getElementById('scoreDisplay0').textContent = state.scores[0];
+    document.getElementById('scoreDisplay1').textContent = state.scores[1];
+  }
+
+  function addWin(i) {
+    state.scores[i]++;
+    render();
+    save();
+    var el = document.getElementById('scoreDisplay' + i);
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+
+  function openEdit() {
+    document.getElementById('nameInput0').value = state.names[0];
+    document.getElementById('nameInput1').value = state.names[1];
+    document.getElementById('editScore0').textContent = '(' + state.scores[0] + ')';
+    document.getElementById('editScore1').textContent = '(' + state.scores[1] + ')';
+    document.getElementById('editModal').classList.add('open');
+    document.getElementById('nameInput0').focus();
+  }
+
+  function saveEdit() {
+    var n0 = document.getElementById('nameInput0').value.trim();
+    var n1 = document.getElementById('nameInput1').value.trim();
+    if (n0) state.names[0] = n0;
+    if (n1) state.names[1] = n1;
+    save();
+    render();
+    document.getElementById('editModal').classList.remove('open');
+  }
+
+  function askReset() {
+    document.getElementById('confirmModal').classList.add('open');
+  }
+
+  function closeConfirm() {
+    document.getElementById('confirmModal').classList.remove('open');
+  }
+
+  function doReset() {
+    state.scores = [0, 0];
+    render();
+    save();
+    closeConfirm();
+  }
+
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  load();
+</script>
+</body>
+</html>
