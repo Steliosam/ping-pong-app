@@ -173,6 +173,28 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
 
+    @media (max-width: 600px) {
+      .center-stack {
+        top: 18%;
+        transform: translate(-50%, 0);
+      }
+      .motto {
+        font-size: clamp(12px, 4vw, 16px);
+        letter-spacing: 3px;
+        padding: 4px 14px 3px;
+      }
+      .player-zone {
+        justify-content: flex-end;
+        padding-bottom: 3.5rem;
+      }
+      .player-score {
+        font-size: clamp(72px, 18vw, 110px);
+      }
+      .tap-hint {
+        display: none;
+      }
+    }
+
     .divider {
       width: 52px;
       height: 52px;
