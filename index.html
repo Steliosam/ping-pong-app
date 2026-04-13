@@ -178,6 +178,10 @@
     }
 
     .divider {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
       width: 52px;
       height: 52px;
       background: var(--bg);
@@ -193,12 +197,10 @@
       cursor: pointer;
       box-shadow: 0 0 0 6px var(--bg);
       transition: background 0.15s, border-color 0.15s, transform 0.1s;
-      pointer-events: all;
-      position: relative;
-      z-index: 20;
+      z-index: 100;
     }
     .divider:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.4); }
-    .divider:active { transform: scale(0.92); }
+    .divider:active { transform: translate(-50%, -50%) scale(0.92); }
 
     /* ─── Footer ──────────────────────────────── */
     footer {
@@ -391,16 +393,14 @@
       <div class="tap-hint">πάτα για νίκη</div>
     </div>
 
-    <div class="center-stack">
-      <button class="divider" id="vsBtn">VS</button>
-    </div>
-
     <div class="player-zone" id="zone1" onclick="addWin(1)">
       <div class="player-name" id="nameDisplay1">Στέλιος</div>
       <div class="player-score" id="scoreDisplay1">0</div>
       <div class="tap-hint">πάτα για νίκη</div>
     </div>
   </div>
+
+  <button class="divider" id="vsBtn">VS</button>
 
   <footer>
     <button class="reset-btn" onclick="askReset()">
