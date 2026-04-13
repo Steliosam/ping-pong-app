@@ -537,7 +537,7 @@
   });
 
   /* ── Beat + TTS on VS button ── */
-     function playBeat(durationMs) {
+      function playBeat(durationMs) {
     var AudioCtx = window.AudioContext || window.webkitAudioContext;
     var ctx = new AudioCtx();
 
@@ -545,21 +545,22 @@
       ctx.resume();
     }
 
-    var bpm = 132;
+    var bpm = 92;   // χαλαρό beat
     var step = 60 / bpm;
-    var start = ctx.currentTime + 0.02;
-    var totalSeconds = Math.max((durationMs || 3000) / 1000, 2.5);
+    var start = ctx.currentTime + 0.03;
+    var totalSeconds = Math.max((durationMs || 5000) / 1000, 5);
     var endTime = start + totalSeconds;
 
-    function kick(t, freq, dur, gainAmount) {
+    function hit(t, freq, dur, volume) {
       var o = ctx.createOscillator();
       var g = ctx.createGain();
+
       o.connect(g);
       g.connect(ctx.destination);
 
       o.type = 'square';
-      o.frequency.setValueAtTime(freq || 180, t);
-      g.gain.setValueAtTime(gainAmount || 0.16, t);
+      o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(volume, t);
       g.gain.exponentialRampToValueAtTime(0.001, t + dur);
 
       o.start(t);
@@ -567,29 +568,27 @@
     }
 
     var t = start;
-    var beatIndex = 0;
+    var count = 0;
 
     while (t < endTime) {
-      kick(t, 180, 0.07, 0.15);
+      // βασικό σταθερό beat
+      hit(t, 170, 0.09, 0.13);
 
-      if (beatIndex % 2 === 1 && t + step * 0.5 < endTime) {
-        kick(t + step * 0.5, 240, 0.05, 0.10);
-      }
-
-      if (beatIndex % 4 === 3 && t + step * 0.75 < endTime) {
-        kick(t + step * 0.75, 300, 0.04, 0.08);
+      // ελαφρύ δεύτερο χτύπημα για groove
+      if (t + step * 0.5 < endTime) {
+        hit(t + step * 0.5, count % 4 === 1 ? 220 : 200, 0.05, 0.07);
       }
 
       t += step;
-      beatIndex++;
+      count++;
     }
 
     setTimeout(function() {
-      ctx.close();
-    }, totalSeconds * 1000 + 300);
+      try { ctx.close(); } catch(e) {}
+    }, totalSeconds * 1000 + 500);
   }
 
-        function speakHistory() {
+          function speakHistory() {
     var history = (state.history || []).slice().sort(function(a,b){ return a.time - b.time; });
     if (!history.length) {
       alert('Δεν υπάρχει ιστορικό ακόμα!');
@@ -598,9 +597,9 @@
 
     window.speechSynthesis.cancel();
 
-    var estimatedPerName = 420;
-    var extraTail = 1800;
-    var totalDuration = history.length * estimatedPerName + extraTail;
+    // Πολύ μεγαλύτερη διάρκεια για να μην κοπεί ποτέ το beat νωρίς
+    // και να συνεχίζει και λίγο μετά
+    var totalDuration = history.length * 900 + 2500;
 
     playBeat(totalDuration);
 
@@ -614,12 +613,12 @@
       var utter = new SpeechSynthesisUtterance(name);
 
       utter.lang = 'el-GR';
-      utter.rate = 1.9;
+      utter.rate = 2.6;
       utter.pitch = 1.0;
       utter.volume = 1;
 
       utter.onend = function() {
-        setTimeout(sayNext, 10);
+        setTimeout(sayNext, 1);
       };
 
       window.speechSynthesis.speak(utter);
