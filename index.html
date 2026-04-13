@@ -442,7 +442,7 @@
 
 <script>
   var DB = 'https://pingpong-3b70f-default-rtdb.firebaseio.com/state.json';
-  var state = { names: ['Γιώργος', 'Στέλιος'], scores: [0, 0] };
+  var state = { names: ['Γιώργος', 'Στέλιος'], scores: [0, 0], history: [] };
   var isSaving = false;
 
   function render() {
@@ -471,20 +471,17 @@
       if (isSaving) return;
       try {
         var d = JSON.parse(e.data);
-        if (d && d.data) { state = d.data; render(); }
+        if (d && d.data) { state = d.data; if (!state.history) state.history = []; render(); }
       } catch(err) {}
     });
-    es.onerror = function() {
-      es.close();
-      setTimeout(listenRealtime, 5000);
-    };
+    es.onerror = function() { es.close(); setTimeout(listenRealtime, 5000); };
   }
 
   async function load() {
     try {
       var r = await fetch(DB);
       var d = await r.json();
-      if (d) state = d;
+      if (d) { state = d; if (!state.history) state.history = []; }
     } catch(e) {}
     render();
     listenRealtime();
@@ -492,6 +489,8 @@
 
   function addWin(i) {
     state.scores[i]++;
+    if (!state.history) state.history = [];
+    state.history.push({ player: i, time: Date.now() });
     render();
     save();
     var el = document.getElementById('scoreDisplay' + i);
@@ -519,16 +518,12 @@
     document.getElementById('editModal').classList.remove('open');
   }
 
-  function askReset() {
-    document.getElementById('confirmModal').classList.add('open');
-  }
-
-  function closeConfirm() {
-    document.getElementById('confirmModal').classList.remove('open');
-  }
+  function askReset() { document.getElementById('confirmModal').classList.add('open'); }
+  function closeConfirm() { document.getElementById('confirmModal').classList.remove('open'); }
 
   function doReset() {
     state.scores = [0, 0];
+    state.history = [];
     render();
     save();
     closeConfirm();
@@ -537,6 +532,54 @@
   document.getElementById('editModal').addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('open');
   });
+
+  /* ── Beat + TTS on VS button ── */
+  function playBeat(onDone) {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var bpm = 120, step = 60 / bpm;
+    var pattern = [
+      { t:0,    freq:180, dur:0.08 },
+      { t:step, freq:220, dur:0.08 },
+      { t:step*1.5, freq:180, dur:0.06 },
+      { t:step*2,   freq:260, dur:0.10 },
+      { t:step*2.5, freq:260, dur:0.06 },
+      { t:step*3,   freq:320, dur:0.12 }
+    ];
+    pattern.forEach(function(n) {
+      var o = ctx.createOscillator();
+      var g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = 'square';
+      o.frequency.value = n.freq;
+      g.gain.setValueAtTime(0.18, ctx.currentTime + n.t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.t + n.dur);
+      o.start(ctx.currentTime + n.t);
+      o.stop(ctx.currentTime + n.t + n.dur + 0.05);
+    });
+    var totalDur = (step * 3 + 0.3) * 1000;
+    setTimeout(function() { ctx.close(); onDone(); }, totalDur);
+  }
+
+  function speakHistory() {
+    var history = (state.history || []).slice().sort(function(a,b){ return a.time - b.time; });
+    if (!history.length) { alert('Δεν υπάρχει ιστορικό ακόμα!'); return; }
+    playBeat(function() {
+      var idx = 0;
+      function sayNext() {
+        if (idx >= history.length) return;
+        var entry = history[idx++];
+        var name = state.names[entry.player];
+        var utter = new SpeechSynthesisUtterance(name);
+        utter.lang = 'el-GR';
+        utter.rate = 0.95;
+        utter.onend = function() { setTimeout(sayNext, 350); };
+        window.speechSynthesis.speak(utter);
+      }
+      sayNext();
+    });
+  }
+
+  document.getElementById('vsBtn').addEventListener('click', speakHistory);
 
   load();
 </script>
