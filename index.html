@@ -537,7 +537,7 @@
   });
 
   /* ── Beat + TTS on VS button ── */
-  function playBeat(onDone) {
+    function playBeat() {
     var ctx = new (window.AudioContext || window.webkitAudioContext)();
     var bpm = 120, step = 60 / bpm;
     var pattern = [
@@ -548,10 +548,12 @@
       { t:step*2.5, freq:260, dur:0.06 },
       { t:step*3,   freq:320, dur:0.12 }
     ];
+
     pattern.forEach(function(n) {
       var o = ctx.createOscillator();
       var g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
+      o.connect(g);
+      g.connect(ctx.destination);
       o.type = 'square';
       o.frequency.value = n.freq;
       g.gain.setValueAtTime(0.18, ctx.currentTime + n.t);
@@ -559,27 +561,43 @@
       o.start(ctx.currentTime + n.t);
       o.stop(ctx.currentTime + n.t + n.dur + 0.05);
     });
+
     var totalDur = (step * 3 + 0.3) * 1000;
-    setTimeout(function() { ctx.close(); onDone(); }, totalDur);
+    setTimeout(function() {
+      ctx.close();
+    }, totalDur);
   }
 
-  function speakHistory() {
+    function speakHistory() {
     var history = (state.history || []).slice().sort(function(a,b){ return a.time - b.time; });
-    if (!history.length) { alert('Δεν υπάρχει ιστορικό ακόμα!'); return; }
-    playBeat(function() {
-      var idx = 0;
-      function sayNext() {
-        if (idx >= history.length) return;
-        var entry = history[idx++];
-        var name = state.names[entry.player];
-        var utter = new SpeechSynthesisUtterance(name);
-        utter.lang = 'el-GR';
-        utter.rate = 0.95;
-        utter.onend = function() { setTimeout(sayNext, 350); };
-        window.speechSynthesis.speak(utter);
-      }
-      sayNext();
-    });
+    if (!history.length) {
+      alert('Δεν υπάρχει ιστορικό ακόμα!');
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    playBeat();
+
+    var idx = 0;
+
+    function sayNext() {
+      if (idx >= history.length) return;
+
+      var entry = history[idx++];
+      var name = state.names[entry.player];
+      var utter = new SpeechSynthesisUtterance(name);
+      utter.lang = 'el-GR';
+      utter.rate = 1.5;
+      utter.pitch = 1.15;
+
+      utter.onend = function() {
+        setTimeout(sayNext, 80);
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+
+    sayNext();
   }
 
   document.getElementById('vsBtn').addEventListener('click', function(e) {
