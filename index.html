@@ -443,8 +443,8 @@
   </div>
 </div>
 
-<audio id="bgLoop" loop>
-  <source src="https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b6f2c91.mp3?filename=acoustic-guitar-ambient-124008.mp3" type="audio/mpeg">
+<audio id="bgLoop" loop preload="auto">
+  <source src="./quitar_music.mp3" type="audio/mpeg">
 </audio>
 <script>
   var DB = 'https://pingpong-3b70f-default-rtdb.firebaseio.com/state.json';
@@ -550,9 +550,10 @@
   window.speechSynthesis.cancel();
 
   var audio = document.getElementById('bgLoop');
-  audio.currentTime = 0;
-  audio.volume = 0.4;
-  audio.play().catch(()=>{});
+  audio.pause();
+audio.currentTime = 0;
+audio.volume = 0.4;
+audio.play().catch(()=>{});
 
   // 🔥 ΤΟ ΜΥΣΤΙΚΟ: μηδενίζουμε pause
   var text = history.map(function(entry) {
