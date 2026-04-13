@@ -443,6 +443,9 @@
   </div>
 </div>
 
+<audio id="bgLoop" loop>
+  <source src="https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b6f2c91.mp3?filename=acoustic-guitar-ambient-124008.mp3" type="audio/mpeg">
+</audio>
 <script>
   var DB = 'https://pingpong-3b70f-default-rtdb.firebaseio.com/state.json';
   var state = { names: ['Γιώργος', 'Στέλιος'], scores: [0, 0], history: [] };
@@ -536,52 +539,9 @@
     if (e.target === this) this.classList.remove('open');
   });
 
-  /* ── Beat + TTS on VS button ── */
-      function playGuitar(durationMs) {
-  var AudioCtx = window.AudioContext || window.webkitAudioContext;
-  var ctx = new AudioCtx();
-
-  if (ctx.state === 'suspended') ctx.resume();
-
-  var start = ctx.currentTime + 0.05;
-  var totalSeconds = (durationMs || 4000) / 1000;
-  var endTime = start + totalSeconds;
-
-  function pluck(t, freq) {
-    var o = ctx.createOscillator();
-    var g = ctx.createGain();
-
-    o.connect(g);
-    g.connect(ctx.destination);
-
-    o.type = 'triangle'; // πιο "κιθάρα" από square
-    o.frequency.setValueAtTime(freq, t);
-
-    g.gain.setValueAtTime(0.12, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-
-    o.start(t);
-    o.stop(t + 0.3);
-  }
-
-  var t = start;
-
-  // χαλαρό ρυθμό (σαν strum)
-  while (t < endTime) {
-    pluck(t, 196);      // G
-    pluck(t + 0.08, 246); // B
-    pluck(t + 0.16, 293); // D
-
-    t += 0.6; // χαλαρό tempo
-  }
-
-  setTimeout(function() {
-    try { ctx.close(); } catch(e) {}
-  }, totalSeconds * 1000 + 500);
-}
-
           function speakHistory() {
   var history = (state.history || []).slice().sort(function(a,b){ return a.time - b.time; });
+
   if (!history.length) {
     alert('Δεν υπάρχει ιστορικό ακόμα!');
     return;
@@ -589,22 +549,27 @@
 
   window.speechSynthesis.cancel();
 
-  // Φτιάχνουμε μια πρόταση με όλα τα ονόματα
+  var audio = document.getElementById('bgLoop');
+  audio.currentTime = 0;
+  audio.volume = 0.4;
+  audio.play().catch(()=>{});
+
+  // 🔥 ΤΟ ΜΥΣΤΙΚΟ: μηδενίζουμε pause
   var text = history.map(function(entry) {
     return state.names[entry.player];
-  }).join(', '); // μικρό pause αλλά όχι σπάσιμο
+  }).join(' \u200B ');   // ΟΧΙ κόμμα
 
   var utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'el-GR';
 
-  // Κανονική ταχύτητα (όπως ζήτησες)
+  utter.lang = 'el-GR';
   utter.rate = 1.0;
   utter.pitch = 1.0;
 
-  // διάρκεια για τη κιθάρα (λίγο παραπάνω για σιγουριά)
-  var duration = Math.max(text.length * 90, 3000) + 1500;
-
-  playGuitar(duration);
+  utter.onend = function() {
+    setTimeout(function() {
+      audio.pause();
+    }, 1200); // παίζει λίγο ακόμα
+  };
 
   window.speechSynthesis.speak(utter);
 }
