@@ -240,16 +240,16 @@
 
     /* ─── Edit Modal ──────────────────────────── */
     .modal-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(4px);
-      z-index: 50;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
     .modal-backdrop.open { display: flex; }
 
     @keyframes pop-in {
@@ -330,16 +330,16 @@
 
     /* ─── Confirm reset overlay ─────────────── */
     .confirm-backdrop {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(4px);
-      z-index: 60;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  z-index: 1001;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
     .confirm-backdrop.open { display: flex; }
 
     .confirm-box {
@@ -537,38 +537,59 @@
   });
 
   /* ── Beat + TTS on VS button ── */
-    function playBeat() {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
-    var bpm = 120, step = 60 / bpm;
-    var pattern = [
-      { t:0,    freq:180, dur:0.08 },
-      { t:step, freq:220, dur:0.08 },
-      { t:step*1.5, freq:180, dur:0.06 },
-      { t:step*2,   freq:260, dur:0.10 },
-      { t:step*2.5, freq:260, dur:0.06 },
-      { t:step*3,   freq:320, dur:0.12 }
-    ];
+     function playBeat(durationMs) {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    var ctx = new AudioCtx();
 
-    pattern.forEach(function(n) {
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+
+    var bpm = 132;
+    var step = 60 / bpm;
+    var start = ctx.currentTime + 0.02;
+    var totalSeconds = Math.max((durationMs || 3000) / 1000, 2.5);
+    var endTime = start + totalSeconds;
+
+    function kick(t, freq, dur, gainAmount) {
       var o = ctx.createOscillator();
       var g = ctx.createGain();
       o.connect(g);
       g.connect(ctx.destination);
-      o.type = 'square';
-      o.frequency.value = n.freq;
-      g.gain.setValueAtTime(0.18, ctx.currentTime + n.t);
-      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.t + n.dur);
-      o.start(ctx.currentTime + n.t);
-      o.stop(ctx.currentTime + n.t + n.dur + 0.05);
-    });
 
-    var totalDur = (step * 3 + 0.3) * 1000;
+      o.type = 'square';
+      o.frequency.setValueAtTime(freq || 180, t);
+      g.gain.setValueAtTime(gainAmount || 0.16, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+      o.start(t);
+      o.stop(t + dur + 0.03);
+    }
+
+    var t = start;
+    var beatIndex = 0;
+
+    while (t < endTime) {
+      kick(t, 180, 0.07, 0.15);
+
+      if (beatIndex % 2 === 1 && t + step * 0.5 < endTime) {
+        kick(t + step * 0.5, 240, 0.05, 0.10);
+      }
+
+      if (beatIndex % 4 === 3 && t + step * 0.75 < endTime) {
+        kick(t + step * 0.75, 300, 0.04, 0.08);
+      }
+
+      t += step;
+      beatIndex++;
+    }
+
     setTimeout(function() {
       ctx.close();
-    }, totalDur);
+    }, totalSeconds * 1000 + 300);
   }
 
-    function speakHistory() {
+        function speakHistory() {
     var history = (state.history || []).slice().sort(function(a,b){ return a.time - b.time; });
     if (!history.length) {
       alert('Δεν υπάρχει ιστορικό ακόμα!');
@@ -576,7 +597,12 @@
     }
 
     window.speechSynthesis.cancel();
-    playBeat();
+
+    var estimatedPerName = 420;
+    var extraTail = 1800;
+    var totalDuration = history.length * estimatedPerName + extraTail;
+
+    playBeat(totalDuration);
 
     var idx = 0;
 
@@ -586,12 +612,14 @@
       var entry = history[idx++];
       var name = state.names[entry.player];
       var utter = new SpeechSynthesisUtterance(name);
+
       utter.lang = 'el-GR';
-      utter.rate = 1.5;
-      utter.pitch = 1.15;
+      utter.rate = 1.9;
+      utter.pitch = 1.0;
+      utter.volume = 1;
 
       utter.onend = function() {
-        setTimeout(sayNext, 80);
+        setTimeout(sayNext, 10);
       };
 
       window.speechSynthesis.speak(utter);
